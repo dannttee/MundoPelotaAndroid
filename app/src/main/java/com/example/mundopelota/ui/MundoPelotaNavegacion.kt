@@ -16,8 +16,12 @@ fun MundoPelotaNavegacion(userAdminViewModel: UserAdminViewModel) {
     val catalogoViewModel: CatalogoViewModel = viewModel()
 
     NavHost(navController = navController, startDestination = "login") {
-        composable("login") { LoginScreen(navController, userAdminViewModel) }
-        composable("home") { HomeScreen(navController, userAdminViewModel) }
+        composable("login") {
+            LoginScreen(navController, userAdminViewModel)
+        }
+        composable("home") {
+            HomeScreen(navController, userAdminViewModel)
+        }
         composable("catalogo") {
             CatalogoScreen(
                 navController = navController,
@@ -26,22 +30,12 @@ fun MundoPelotaNavegacion(userAdminViewModel: UserAdminViewModel) {
                 userAdminViewModel = userAdminViewModel
             )
         }
-        composable("detalle") { DetalleProductoScreen(navController) }
-        composable("carrito") { CarritoScreen(navController, cartViewModel) }
-        composable("admin") {
-            HomeAdminScreen(
-                navController = navController,
-                catalogViewModel = catalogoViewModel
-            )
+        composable("carrito") {
+            CarritoScreen(navController, cartViewModel, userAdminViewModel)
         }
-        composable(
-            route = "catalogoAdmin?agregar={agregar}",
-            arguments = listOf(navArgument("agregar") { type = NavType.StringType; defaultValue = "0" })
-        ) {
-            CatalogoAdminScreen(
-                navController = navController,
-                catalogViewModel = catalogoViewModel
-            )
+        composable("admin") {
+            // HomeAdminScreen por implementar
+            HomeScreen(navController, userAdminViewModel)
         }
         composable("catalogoAdmin") {
             CatalogoAdminScreen(
@@ -49,7 +43,6 @@ fun MundoPelotaNavegacion(userAdminViewModel: UserAdminViewModel) {
                 catalogViewModel = catalogoViewModel
             )
         }
-        composable("info") { InfoScreen(navController) }
     }
 }
 

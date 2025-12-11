@@ -7,10 +7,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.mundopelota.viewmodel.CartViewModel
+import com.example.mundopelota.viewmodel.UserAdminViewModel
+
 
 @Composable
-fun CarritoScreen(navController: NavController, cartViewModel: CartViewModel) {
+fun CarritoScreen(
+    navController: NavController,
+    cartViewModel: CartViewModel,
+    userAdminViewModel: UserAdminViewModel
+) {
     val cartBalls = cartViewModel.carrito
+    var mensaje by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -19,6 +26,7 @@ fun CarritoScreen(navController: NavController, cartViewModel: CartViewModel) {
     ) {
         Text("Carrito de compras", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(16.dp))
+
         if (cartBalls.isNotEmpty()) {
             cartBalls.forEach { pelota ->
                 Card(
@@ -27,25 +35,30 @@ fun CarritoScreen(navController: NavController, cartViewModel: CartViewModel) {
                         .fillMaxWidth()
                 ) {
                     Row(modifier = Modifier.padding(12.dp)) {
-                        // Muestra nombre y precio de la pelota
-                        Text("${pelota.nombre} - \$${pelota.precio}", style = MaterialTheme.typography.bodyMedium)
+                        Text("${pelota.nombre} - \$${pelota.precio}",
+                            style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
+
             Spacer(Modifier.height(18.dp))
+
             Button(
                 onClick = {
-                    cartViewModel.clearCart()
+                    val uid = userAdminViewModel.usuarioId.value ?: return@Button
+                    cartViewModel.checkoutServidor(uid)
+                    mensaje = "Compra realizada con éxito"
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Confirmar compra")
             }
+
+
             Spacer(Modifier.height(10.dp))
+
             Button(
-                onClick = {
-                    cartViewModel.clearCart()
-                },
+                onClick = { cartViewModel.clearCart() },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Vaciar carrito")
@@ -53,7 +66,18 @@ fun CarritoScreen(navController: NavController, cartViewModel: CartViewModel) {
         } else {
             Text("Tu carrito está vacío.", style = MaterialTheme.typography.bodyMedium)
         }
+
+        mensaje?.let {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+
         Spacer(Modifier.height(16.dp))
+
         Button(
             onClick = { navController.popBackStack() },
             modifier = Modifier.fillMaxWidth()
@@ -62,3 +86,5 @@ fun CarritoScreen(navController: NavController, cartViewModel: CartViewModel) {
         }
     }
 }
+
+
