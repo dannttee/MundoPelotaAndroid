@@ -13,7 +13,7 @@ data class LoginRequest(
 data class UsuarioRequest(
     val email: String,
     val nombre: String,
-    val password: String?
+    val password: String
 )
 
 data class UsuarioResponse(
@@ -25,7 +25,6 @@ data class UsuarioResponse(
     val updatedAt: String? = null
 )
 
-// 🆕 WRAPPER DE RESPUESTA API
 data class ApiResponse<T>(
     val success: Boolean,
     val message: String,
