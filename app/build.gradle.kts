@@ -61,6 +61,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.6.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1")
     implementation("io.coil-kt:coil-compose:2.4.0")
+    implementation("com.google.android.material:material:1.11.0")
+    implementation("androidx.compose.material:material-icons-extended:1.7.5")
+
 
 
     // 🆕 RETROFIT (HTTP Client)
@@ -74,6 +77,13 @@ dependencies {
 
     // 🆕 GSON (JSON serialization)
     implementation("com.google.code.gson:gson:2.10.1")
+
+    // Retrofit para networking
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+
+// OkHttp para logging (opcional pero muy útil para debug)
+    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

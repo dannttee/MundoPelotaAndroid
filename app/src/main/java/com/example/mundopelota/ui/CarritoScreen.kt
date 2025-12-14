@@ -12,20 +12,17 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
 import com.example.mundopelota.model.Pelota
 import com.example.mundopelota.ui.theme.Purple40
 import com.example.mundopelota.viewmodel.CatalogoViewModel
 import kotlinx.coroutines.launch
 import android.util.Log
+
 
 @Composable
 fun CarritoScreen(
@@ -429,21 +426,6 @@ fun CarritoItemCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                // Imagen del producto (Agregada)
-                AsyncImage(
-                    model = pelota.imageUrl,
-                    contentDescription = pelota.nombre,
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.Gray.copy(alpha = 0.1f)),
-                    contentScale = ContentScale.Crop,
-                    placeholder = painterResource(id = android.R.drawable.ic_menu_gallery),
-                    error = painterResource(id = android.R.drawable.ic_menu_report_image)
-                )
-
-                Spacer(modifier = Modifier.width(16.dp))
-
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         pelota.nombre,

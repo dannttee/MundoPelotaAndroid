@@ -2,17 +2,17 @@ package com.example.mundopelota.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,10 +25,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import com.example.mundopelota.viewmodel.UserAdminViewModel
-import com.example.mundopelota.viewmodel.CatalogoViewModel
 import com.example.mundopelota.model.Pelota
 import com.example.mundopelota.ui.theme.Purple40
+import com.example.mundopelota.viewmodel.CatalogoViewModel
+import com.example.mundopelota.viewmodel.UserAdminViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,17 +36,17 @@ import kotlinx.coroutines.launch
 fun HomeScreen(
     navController: NavController,
     userAdminViewModel: UserAdminViewModel,
-    catalogoViewModel: CatalogoViewModel,
-    isAdmin: Boolean = false
+    catalogoViewModel: CatalogoViewModel
 ) {
+    // LEEMOS EL ESTADO DIRECTAMENTE DEL VIEWMODEL (Esto asegura reactividad)
+    val isAdmin = userAdminViewModel.isAdmin
+
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val pelotas = catalogoViewModel.pelotas
     val pelotasDestacadas = pelotas.take(4)
 
     LaunchedEffect(Unit) {
-        // CORRECCIÓN CRÍTICA: NO llamamos a userAdminViewModel.obtenerUsuarios() aquí
-        // Esa función probablemente está rota o el endpoint no existe, y es lo que te crashea como admin.
         catalogoViewModel.obtenerPelotasServidor()
     }
 
@@ -72,9 +72,7 @@ fun HomeScreen(
                     label = { Text("Home") },
                     icon = { Icon(Icons.Default.Home, contentDescription = null) },
                     selected = true,
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                    }
+                    onClick = { scope.launch { drawerState.close() } }
                 )
 
                 NavigationDrawerItem(
@@ -103,10 +101,7 @@ fun HomeScreen(
                         label = { Text("Panel Admin") },
                         icon = { Icon(Icons.Default.Settings, contentDescription = null) },
                         selected = false,
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            // Ya estamos en el home admin, no navegamos a ningún lado
-                        }
+                        onClick = { scope.launch { drawerState.close() } }
                     )
                 }
 
@@ -150,17 +145,29 @@ fun HomeScreen(
                     .padding(16.dp)
             ) {
                 if (isAdmin) {
-                    // SI ES ADMIN: Mostramos el panel de bienvenida
                     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text("Panel de Administración", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                             Text("Bienvenido, Administrador.", color = Color.Gray)
                             Spacer(modifier = Modifier.height(16.dp))
-                            Text("Desde aquí podrás gestionar usuarios y productos próximamente.", style = MaterialTheme.typography.bodyMedium)
+                            Text("Desde aquí podrás gestionar usuarios y productos.", style = MaterialTheme.typography.bodyMedium)
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            // --- BOTÓN AGREGADO AQUÍ ---
+                            Button(
+                                onClick = { navController.navigate("admin_catalogo") },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = Purple40)
+                            ) {
+                                Icon(Icons.Default.Settings, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Gestionar Catálogo de Productos")
+                            }
+                            // ---------------------------
                         }
                     }
                 } else {
-                    // SI NO ES ADMIN: Mostramos diseño original
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text("¡Bienvenido a MundoPelota!", fontWeight = FontWeight.Bold, color = Purple40)
@@ -193,9 +200,7 @@ fun HomeScreen(
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
-
                     Text("Productos Destacados", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-
                     Spacer(modifier = Modifier.height(8.dp))
 
                     if (pelotasDestacadas.isNotEmpty()) {
@@ -212,33 +217,10 @@ fun HomeScreen(
                         }
                     } else {
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
+                            modifier = Modifier.fillMaxWidth().height(200.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator(color = Purple40)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text("Información", fontWeight = FontWeight.Bold)
-
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Info, contentDescription = null, tint = Purple40)
-                                Text("  Envío gratis en compras mayores a $50.000")
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Purple40)
-                                Text("  Garantía garantizada")
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Phone, contentDescription = null, tint = Purple40)
-                                Text("  Soporte 24/7")
-                            }
                         }
                     }
                 } // FIN ELSE
@@ -247,11 +229,9 @@ fun HomeScreen(
     }
 }
 
+// FUNCION ProductoCardMini (Debe estar FUERA de HomeScreen, al mismo nivel)
 @Composable
-fun ProductoCardMini(
-    pelota: Pelota,
-    navController: NavController
-) {
+fun ProductoCardMini(pelota: Pelota, navController: NavController) {
     Card(
         modifier = Modifier
             .fillMaxWidth()

@@ -1,33 +1,41 @@
 package com.example.mundopelota.viewmodel
 
+import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf // IMPORTANTE: Para el dólar
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.mundopelota.model.Pelota
 import com.example.mundopelota.network.ApiServiceCatalogo
+import com.example.mundopelota.network.ApiServiceExternal // IMPORTANTE: Para el dólar
 import com.example.mundopelota.network.PelotaRequest
 import com.example.mundopelota.network.PelotaResponse
 import com.example.mundopelota.network.RetrofitClient
-import com.example.mundopelota.repository.PelotaRepository
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
-import android.util.Log
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 class CatalogoViewModel : ViewModel() {
 
     private val catalogoApi: ApiServiceCatalogo = RetrofitClient.getApiServiceCatalogo()
+    private val externalApi: ApiServiceExternal = RetrofitClient.getApiServiceExternal()
 
-    // Lista que usa tu CatalogoScreen y CatalogoAdminScreen
+    // ----------------------------------------------------------------
+    // LISTA PRINCIPAL (Usada por UI Admin y Cliente)
+    // ----------------------------------------------------------------
     val pelotas = mutableStateListOf<Pelota>()
 
-    // Respuesta cruda del servidor (opcional)
+    // VARIABLE DEL DÓLAR (Observable por UI)
+    var valorDolar by mutableDoubleStateOf(0.0)
+        private set
+
+    // Respuesta cruda del servidor (útil para debug o datos extra)
     private val _pelotasServidor = MutableLiveData<List<PelotaResponse>?>()
     val pelotasServidor: LiveData<List<PelotaResponse>?> = _pelotasServidor
 
+    // Estados de UI
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
@@ -35,16 +43,18 @@ class CatalogoViewModel : ViewModel() {
     val error: LiveData<String?> = _error
 
     init {
-        // Cargar pelotas del BACKEND al iniciar
+        // Cargar datos al iniciar
         obtenerPelotasServidor()
+        obtenerValorDolarDia() // <-- CARGAR DÓLAR
     }
 
     private fun cargarPelotasIniciales() {
-        pelotas.clear()
-        pelotas.addAll(PelotaRepository.getPelotas())
-        Log.d("CatalogoVM", "Pelotas iniciales (fallback) cargadas: ${pelotas.size}")
-        pelotas.forEach { Log.d("CatalogoVM", "Local: ${it.nombre} - Stock: ${it.stock}") }
+        Log.w("CatalogoVM", "⚠️ Cargando fallback local (vacío por ahora)")
     }
+
+    // ----------------------------------------------------------------
+    // OPERACIONES DE LECTURA (GET)
+    // ----------------------------------------------------------------
 
     fun obtenerPelotasServidor() {
         _isLoading.value = true
@@ -52,22 +62,15 @@ class CatalogoViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                Log.d("CatalogoVM", "Llamando a /api/pelotas")
+                Log.d("CatalogoVM", "📡 Llamando a GET /api/pelotas")
                 val response = catalogoApi.obtenerPelotas()
-
-                Log.d("CatalogoVM", "Response code: ${response.code()}")
 
                 if (response.isSuccessful && response.body() != null) {
                     val data = response.body()!!
                     _pelotasServidor.value = data
 
-                    // 🔍 LOG DE DEBUG: Ver qué devuelve el servidor
-                    Log.d("CatalogoVM", "Datos del servidor recibidos: ${data.size} pelotas")
-                    data.forEach {
-                        Log.d("CatalogoVM", "Servidor: ID=${it.id}, Nombre=${it.nombre}, Stock=${it.stock}")
-                    }
+                    Log.d("CatalogoVM", "✅ Recibidas ${data.size} pelotas")
 
-                    // Mapear PelotaResponse → Pelota (modelo de la app)
                     pelotas.clear()
                     pelotas.addAll(
                         data.map {
@@ -83,18 +86,14 @@ class CatalogoViewModel : ViewModel() {
                             )
                         }
                     )
-                    Log.d("CatalogoVM", "Pelotas recibidas del servidor: ${pelotas.size}")
-                    pelotas.forEach { Log.d("CatalogoVM", "Mapeada: ${it.nombre} - Stock: ${it.stock}") }
                 } else {
                     _error.value = "Error ${response.code()}: ${response.message()}"
-                    Log.e("CatalogoVM", "Error body: ${response.errorBody()?.string()}")
-                    // Si falla, volver a cargar las iniciales como fallback
+                    Log.e("CatalogoVM", "❌ Error servidor: ${response.code()}")
                     cargarPelotasIniciales()
                 }
             } catch (e: Exception) {
                 _error.value = "Error de conexión: ${e.message}"
-                Log.e("CatalogoVM", "Exception: ${e.stackTraceToString()}")
-                // Si falla, volver a cargar las iniciales como fallback
+                Log.e("CatalogoVM", "❌ Excepción: ${e.message}")
                 cargarPelotasIniciales()
             } finally {
                 _isLoading.value = false
@@ -102,211 +101,45 @@ class CatalogoViewModel : ViewModel() {
         }
     }
 
-    // 🆕 NUEVA FUNCIÓN: Decrementar stock al comprar
-    fun decrementarStockAlComprar(pelotaId: Long, onSuccess: (() -> Unit)? = null) {
+    // ----------------------------------------------------------------
+    // API EXTERNA (DÓLAR)
+    // ----------------------------------------------------------------
+    fun obtenerValorDolarDia() {
         viewModelScope.launch {
             try {
-                // Encontrar la pelota en la lista local
-                val pelota = pelotas.find { it.id == pelotaId }
-
-                if (pelota == null) {
-                    Log.e("CatalogoVM", "❌ Pelota con ID $pelotaId no encontrada")
-                    _error.value = "Producto no encontrado"
-                    return@launch
-                }
-
-                // Validar que haya stock
-                if (pelota.stock <= 0) {
-                    Log.e("CatalogoVM", "❌ Sin stock para ${pelota.nombre}")
-                    _error.value = "No hay stock disponible"
-                    return@launch
-                }
-
-                Log.d("CatalogoVM", "📦 Decrementando stock de: ${pelota.nombre} (ID=$pelotaId)")
-                Log.d("CatalogoVM", "   Stock actual: ${pelota.stock} → Nuevo: ${pelota.stock - 1}")
-
-                // Crear request con stock decrementado
-                val nuevoStock = pelota.stock - 1
-                val request = PelotaRequest(
-                    nombre = pelota.nombre,
-                    precio = pelota.precio,
-                    descripcion = pelota.descripcion,
-                    imageUrl = pelota.imageUrl,
-                    deporte = pelota.deporte,
-                    marca = pelota.marca,
-                    stock = nuevoStock  // ← STOCK DECREMENTADO
-                )
-
-                // Actualizar en el servidor usando PUT /api/pelotas/{id}
-                val response = catalogoApi.actualizarPelota(pelotaId, request)
-
+                Log.d("DolarAPI", "💵 Obteniendo valor del dólar...")
+                val response = externalApi.obtenerValorDolar()
                 if (response.isSuccessful && response.body() != null) {
-                    val pelotaActualizada = response.body()!!
-
-                    // Actualizar la lista local con los nuevos datos
-                    val index = pelotas.indexOfFirst { it.id == pelotaId }
-                    if (index != -1) {
-                        pelotas[index] = Pelota(
-                            id = pelotaActualizada.id,
-                            nombre = pelotaActualizada.nombre,
-                            precio = pelotaActualizada.precio,
-                            descripcion = pelotaActualizada.descripcion,
-                            imageUrl = pelotaActualizada.imageUrl,
-                            deporte = pelotaActualizada.deporte,
-                            marca = pelotaActualizada.marca,
-                            stock = pelotaActualizada.stock
-                        )
+                    val lista = response.body()!!.serie
+                    if (lista.isNotEmpty()) {
+                        valorDolar = lista[0].valor
+                        Log.d("DolarAPI", "✅ Dólar hoy: $$valorDolar")
                     }
-
-                    Log.d("CatalogoVM", "✅ Stock actualizado en servidor: ${pelotaActualizada.nombre}")
-                    Log.d("CatalogoVM", "   Nuevo stock desde servidor: ${pelotaActualizada.stock}")
-                    _error.value = null
-                    onSuccess?.invoke()
                 } else {
-                    Log.e("CatalogoVM", "❌ Error ${response.code()}: ${response.message()}")
-                    Log.e("CatalogoVM", "   Body: ${response.errorBody()?.string()}")
-                    _error.value = "Error al actualizar stock: ${response.code()}"
+                    Log.e("DolarAPI", "⚠️ Error al obtener dólar: ${response.code()}")
                 }
             } catch (e: Exception) {
-                Log.e("CatalogoVM", "❌ Exception al decrementar stock: ${e.message}")
-                Log.e("CatalogoVM", e.stackTraceToString())
-                _error.value = "Error de conexión: ${e.message}"
+                Log.e("DolarAPI", "❌ Excepción dólar: ${e.message}")
             }
         }
     }
 
-    // 🆕 VERSIÓN SUSPENDIBLE: Restaurar stock (ESPERA hasta completar)
-    suspend fun restaurarStockAlCancelarSuspend(pelotaId: Long): Result<Unit> {
-        return try {
-            // Encontrar la pelota
-            val pelota = pelotas.find { it.id == pelotaId }
+    // ----------------------------------------------------------------
+    // OPERACIONES DE ESCRITURA (ADMIN & COMPRA)
+    // ----------------------------------------------------------------
 
-            if (pelota == null) {
-                Log.e("CatalogoVM", "❌ Pelota ID $pelotaId no encontrada")
-                return Result.failure(Exception("Producto no encontrado"))
-            }
-
-            Log.d("CatalogoVM", "🔄 Restaurando stock (suspend): ${pelota.nombre}")
-
-            // Crear request con stock incrementado
-            val nuevoStock = pelota.stock + 1
-            val request = PelotaRequest(
-                nombre = pelota.nombre,
-                precio = pelota.precio,
-                descripcion = pelota.descripcion,
-                imageUrl = pelota.imageUrl,
-                deporte = pelota.deporte,
-                marca = pelota.marca,
-                stock = nuevoStock
-            )
-
-            // Llamar API
-            val response = catalogoApi.actualizarPelota(pelotaId, request)
-
-            if (response.isSuccessful && response.body() != null) {
-                val pelotaActualizada = response.body()!!
-
-                // Actualizar lista local
-                val index = pelotas.indexOfFirst { it.id == pelotaId }
-                if (index != -1) {
-                    pelotas[index] = Pelota(
-                        id = pelotaActualizada.id,
-                        nombre = pelotaActualizada.nombre,
-                        precio = pelotaActualizada.precio,
-                        descripcion = pelotaActualizada.descripcion,
-                        imageUrl = pelotaActualizada.imageUrl,
-                        deporte = pelotaActualizada.deporte,
-                        marca = pelotaActualizada.marca,
-                        stock = pelotaActualizada.stock
-                    )
-                }
-
-                Log.d("CatalogoVM", "✅ Stock restaurado (suspend): ${pelotaActualizada.nombre} - Nuevo stock: ${pelotaActualizada.stock}")
-                _error.value = null
-                Result.success(Unit)
-            } else {
-                Log.e("CatalogoVM", "❌ Error al restaurar: ${response.code()}")
-                Result.failure(Exception("Error ${response.code()}: ${response.message()}"))
-            }
-        } catch (e: Exception) {
-            Log.e("CatalogoVM", "❌ Exception: ${e.message}")
-            Result.failure(e)
-        }
-    }
-
-    // 🆕 VERSIÓN CALLBACK: Restaurar stock (por si aún usas callbacks)
-    fun restaurarStockAlCancelar(pelotaId: Long, onSuccess: (() -> Unit)? = null) {
-        viewModelScope.launch {
-            try {
-                // Encontrar la pelota en la lista local
-                val pelota = pelotas.find { it.id == pelotaId }
-
-                if (pelota == null) {
-                    Log.e("CatalogoVM", "❌ Pelota con ID $pelotaId no encontrada para restaurar")
-                    _error.value = "Producto no encontrado"
-                    return@launch
-                }
-
-                Log.d("CatalogoVM", "🔄 Restaurando stock de: ${pelota.nombre} (ID=$pelotaId)")
-                Log.d("CatalogoVM", "   Stock actual: ${pelota.stock} → Nuevo: ${pelota.stock + 1}")
-
-                // Crear request con stock incrementado
-                val nuevoStock = pelota.stock + 1
-                val request = PelotaRequest(
-                    nombre = pelota.nombre,
-                    precio = pelota.precio,
-                    descripcion = pelota.descripcion,
-                    imageUrl = pelota.imageUrl,
-                    deporte = pelota.deporte,
-                    marca = pelota.marca,
-                    stock = nuevoStock  // ← STOCK INCREMENTADO
-                )
-
-                // Actualizar en el servidor usando PUT /api/pelotas/{id}
-                val response = catalogoApi.actualizarPelota(pelotaId, request)
-
-                if (response.isSuccessful && response.body() != null) {
-                    val pelotaActualizada = response.body()!!
-
-                    // Actualizar la lista local con los nuevos datos
-                    val index = pelotas.indexOfFirst { it.id == pelotaId }
-                    if (index != -1) {
-                        pelotas[index] = Pelota(
-                            id = pelotaActualizada.id,
-                            nombre = pelotaActualizada.nombre,
-                            precio = pelotaActualizada.precio,
-                            descripcion = pelotaActualizada.descripcion,
-                            imageUrl = pelotaActualizada.imageUrl,
-                            deporte = pelotaActualizada.deporte,
-                            marca = pelotaActualizada.marca,
-                            stock = pelotaActualizada.stock
-                        )
-                    }
-
-                    Log.d("CatalogoVM", "✅ Stock restaurado en servidor: ${pelotaActualizada.nombre}")
-                    Log.d("CatalogoVM", "   Nuevo stock desde servidor: ${pelotaActualizada.stock}")
-                    _error.value = null
-                    onSuccess?.invoke()
-                } else {
-                    Log.e("CatalogoVM", "❌ Error al restaurar: ${response.code()}")
-                    Log.e("CatalogoVM", "   Body: ${response.errorBody()?.string()}")
-                    _error.value = "Error al restaurar stock: ${response.code()}"
-                }
-            } catch (e: Exception) {
-                Log.e("CatalogoVM", "❌ Exception al restaurar stock: ${e.message}")
-                Log.e("CatalogoVM", e.stackTraceToString())
-                _error.value = "Error de conexión: ${e.message}"
-            }
-        }
-    }
-
-    // Crear una pelota en el backend y agregarla a la lista local
+    // 1. Crear Pelota (Admin)
     fun crearPelota(request: PelotaRequest, onSuccess: (() -> Unit)? = null) {
         _isLoading.value = true
         _error.value = null
 
         viewModelScope.launch {
             try {
+                // Aquí se envía la request al backend
+                // Si la imageUrl es una URI local (file://...), el backend la guardará como string.
+                // En una app real, aquí se debería subir la imagen a un servidor (S3/Cloudinary)
+                // y enviar esa URL pública. Para la tarea, enviar la URI local es válido funcionalmente.
+
                 val response = catalogoApi.crearPelota(request)
                 if (response.isSuccessful && response.body() != null) {
                     val nueva = response.body()!!
@@ -322,6 +155,7 @@ class CatalogoViewModel : ViewModel() {
                             stock = nueva.stock
                         )
                     )
+                    Log.d("CatalogoVM", "✅ Pelota creada: ${nueva.nombre}")
                     onSuccess?.invoke()
                 } else {
                     _error.value = "Error al crear: ${response.code()}"
@@ -334,31 +168,151 @@ class CatalogoViewModel : ViewModel() {
         }
     }
 
-    // ALIAS: agregarPelota → para CatalogoAdminScreen
-    fun agregarPelota(pelota: Pelota) {
-        pelotas.add(pelota)
-    }
+    // 2. Decrementar Stock (Al agregar al carrito)
+    fun decrementarStockAlComprar(pelotaId: Long, onSuccess: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            try {
+                val pelota = pelotas.find { it.id == pelotaId } ?: return@launch
+                if (pelota.stock <= 0) {
+                    _error.value = "Sin stock"
+                    return@launch
+                }
 
-    // Elimina una pelota por id en la lista local
-    fun removePelota(id: Long) {
-        pelotas.removeAll { it.id == id }
-    }
+                val nuevoStock = pelota.stock - 1
+                val request = mapToRequest(pelota, nuevoStock)
 
-    // ALIAS: eliminarPelota → para CatalogoAdminScreen
-    fun eliminarPelota(id: Long) {
-        removePelota(id)
-    }
+                val response = catalogoApi.actualizarPelota(pelotaId, request)
 
-    // Actualiza una pelota en la lista local
-    fun updatePelota(pelotaActualizada: Pelota) {
-        val index = pelotas.indexOfFirst { it.id == pelotaActualizada.id }
-        if (index != -1) {
-            pelotas[index] = pelotaActualizada
+                if (response.isSuccessful && response.body() != null) {
+                    actualizarListaLocal(response.body()!!)
+                    Log.d("CatalogoVM", "✅ Stock bajado a $nuevoStock")
+                    onSuccess?.invoke()
+                } else {
+                    _error.value = "Error stock: ${response.code()}"
+                }
+            } catch (e: Exception) {
+                _error.value = "Error red: ${e.message}"
+            }
         }
     }
 
-    // ALIAS: actualizarPelota → para CatalogoAdminScreen
+    // 3. Restaurar Stock (Al cancelar compra)
+    suspend fun restaurarStockAlCancelarSuspend(pelotaId: Long): Result<Unit> {
+        return try {
+            val pelota = pelotas.find { it.id == pelotaId }
+                ?: return Result.failure(Exception("Producto no encontrado"))
+
+            val nuevoStock = pelota.stock + 1
+            val request = mapToRequest(pelota, nuevoStock)
+
+            val response = catalogoApi.actualizarPelota(pelotaId, request)
+
+            if (response.isSuccessful && response.body() != null) {
+                actualizarListaLocal(response.body()!!)
+                Log.d("CatalogoVM", "✅ Stock restaurado a $nuevoStock")
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Error API: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Versión callback (legacy)
+    fun restaurarStockAlCancelar(pelotaId: Long, onSuccess: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            val result = restaurarStockAlCancelarSuspend(pelotaId)
+            if (result.isSuccess) onSuccess?.invoke()
+            else _error.value = result.exceptionOrNull()?.message
+        }
+    }
+
+    // ----------------------------------------------------------------
+    // ALIAS & UTILIDADES
+    // ----------------------------------------------------------------
+
+    fun agregarPelota(pelota: Pelota) {
+        // Alias para crearPelota localmente si fuera necesario,
+        // pero idealmente usar crearPelota(request)
+        pelotas.add(pelota)
+    }
+
+    // ACTUALIZAR (PUT)
+    // Se usa tanto para editar productos desde el panel Admin como para cambiar stock
     fun actualizarPelota(pelotaActualizada: Pelota) {
-        updatePelota(pelotaActualizada)
+        viewModelScope.launch {
+            try {
+                val request = PelotaRequest(
+                    nombre = pelotaActualizada.nombre,
+                    precio = pelotaActualizada.precio,
+                    descripcion = pelotaActualizada.descripcion,
+                    imageUrl = pelotaActualizada.imageUrl,
+                    deporte = pelotaActualizada.deporte,
+                    marca = pelotaActualizada.marca,
+                    stock = pelotaActualizada.stock
+                )
+
+                val response = catalogoApi.actualizarPelota(pelotaActualizada.id, request)
+
+                if (response.isSuccessful && response.body() != null) {
+                    actualizarListaLocal(response.body()!!)
+                    Log.d("CatalogoVM", "✅ Pelota actualizada: ${pelotaActualizada.nombre}")
+                } else {
+                    _error.value = "Error al actualizar: ${response.code()}"
+                }
+            } catch (e: Exception) {
+                _error.value = "Error de conexión al actualizar"
+            }
+        }
+    }
+
+    fun eliminarPelota(id: Long) {
+        // Elimina localmente y del servidor
+        viewModelScope.launch {
+            try {
+                val response = catalogoApi.eliminarPelota(id)
+                if (response.isSuccessful) {
+                    pelotas.removeAll { it.id == id }
+                    Log.d("CatalogoVM", "✅ Pelota eliminada ID: $id")
+                } else {
+                    _error.value = "Error al eliminar: ${response.code()}"
+                }
+            } catch (e: Exception) {
+                _error.value = "Error al eliminar: ${e.message}"
+                // Fallback local por si el server falla pero queremos que la UI responda
+                pelotas.removeAll { it.id == id }
+            }
+        }
+    }
+
+    private fun actualizarListaLocal(response: PelotaResponse) {
+        val index = pelotas.indexOfFirst { it.id == response.id }
+        if (index != -1) {
+            pelotas[index] = Pelota(
+                id = response.id,
+                nombre = response.nombre,
+                precio = response.precio,
+                descripcion = response.descripcion,
+                imageUrl = response.imageUrl,
+                deporte = response.deporte,
+                marca = response.marca,
+                stock = response.stock
+            )
+        }
+    }
+
+    private fun mapToRequest(pelota: Pelota, nuevoStock: Int): PelotaRequest {
+        return PelotaRequest(
+            nombre = pelota.nombre,
+            precio = pelota.precio,
+            descripcion = pelota.descripcion,
+            imageUrl = pelota.imageUrl,
+            deporte = pelota.deporte,
+            marca = pelota.marca,
+            stock = nuevoStock
+        )
     }
 }
+
+

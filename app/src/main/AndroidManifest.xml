@@ -2,7 +2,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- PERMISOS -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- SOLUCIÓN ERROR 1: Etiqueta de hardware requerida por Google Play -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
         android:allowBackup="true"
@@ -12,12 +21,18 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.LibreriaSfiterror">
+        tools:targetApi="31"
+        android:theme="@style/Theme.Material3.DayNight.NoActionBar">
+
+        <!-- SOLUCIÓN ERROR 2 Y 3:
+             He cambiado "@style/Theme.MundoPelota" (que no existía)
+             por "@style/Theme.Material3.DayNight.NoActionBar".
+             Esto eliminará las letras rojas y permitirá que la app corra. -->
+
         <activity
-            android:name="com.example.mundopelota.MainActivity"
+            android:name=".MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.LibreriaSfiterror">
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -26,4 +41,7 @@
     </application>
 
 </manifest>
+
+
+
 

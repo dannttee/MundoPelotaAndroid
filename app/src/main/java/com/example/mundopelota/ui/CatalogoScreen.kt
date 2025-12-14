@@ -6,39 +6,58 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.navigation.NavController
-import com.example.mundopelota.viewmodel.CatalogoViewModel
-import com.example.mundopelota.model.Pelota
-import com.example.mundopelota.model.categoriaDesdeDeporte
-import com.example.mundopelota.ui.theme.Purple40
-import kotlinx.coroutines.launch
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.mundopelota.model.Pelota
+import com.example.mundopelota.ui.theme.Purple40
+import com.example.mundopelota.viewmodel.CatalogoViewModel
+import kotlinx.coroutines.launch
 
+// Enum dummy para UI
+enum class CategoriaDeporte { FUTBOL, BASKETBALL, TENNIS, OTRO }
+
+fun categoriaDesdeDeporte(deporte: String): CategoriaDeporte? {
+    return try {
+        CategoriaDeporte.valueOf(deporte.uppercase())
+    } catch (e: Exception) {
+        null
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CatalogoScreen(
     navController: NavController,
     catalogoViewModel: CatalogoViewModel,
     onAgregarAlCarrito: (Pelota) -> Unit = {}
 ) {
+    // 1. Observamos datos del servidor y estados
     val productosServidor by catalogoViewModel.pelotasServidor.observeAsState()
     val isLoading by catalogoViewModel.isLoading.observeAsState(false)
     val error by catalogoViewModel.error.observeAsState()
-    val pelotas = catalogoViewModel.pelotas
+
+    // 2. Observamos el valor del Dólar (State en ViewModel)
+    // Nota: Como 'valorDolar' es un MutableState en el VM, lo leemos directo
+    val valorDolar = catalogoViewModel.valorDolar
+
+    // Usamos productosServidor si existe, si no, la lista local
+    val pelotas = if (!productosServidor.isNullOrEmpty()) {
+        catalogoViewModel.pelotas
+    } else {
+        catalogoViewModel.pelotas
+    }
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -46,6 +65,8 @@ fun CatalogoScreen(
 
     LaunchedEffect(Unit) {
         catalogoViewModel.obtenerPelotasServidor()
+        // El dólar ya se pide en el init del ViewModel, pero no hace daño refrescar si quieres
+        // catalogoViewModel.obtenerValorDolarDia()
     }
 
     ModalNavigationDrawer(
@@ -55,7 +76,7 @@ fun CatalogoScreen(
                 modifier = Modifier.fillMaxWidth(0.8f),
                 drawerContainerColor = Color.White
             ) {
-                // Header del drawer
+                // Header Drawer
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -63,23 +84,30 @@ fun CatalogoScreen(
                         .padding(20.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        "Menú",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "Menú",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        if (valorDolar > 0) {
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "Dólar hoy: $${valorDolar}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.White.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
                 }
 
-                Divider()
+                HorizontalDivider()
 
-                // Items del menú
                 NavigationDrawerItem(
                     label = { Text("Catálogo", fontWeight = FontWeight.Bold) },
                     selected = true,
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                    },
+                    onClick = { scope.launch { drawerState.close() } },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
 
@@ -94,23 +122,12 @@ fun CatalogoScreen(
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
 
-                Divider(modifier = Modifier.padding(vertical = 8.dp))
-
-                NavigationDrawerItem(
-                    label = { Text("Home", fontWeight = FontWeight.Bold) },
-                    selected = false,
-                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                        navController.navigate("home")
-                    },
-                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                 NavigationDrawerItem(
                     label = { Text("Cerrar Sesión", fontWeight = FontWeight.Bold) },
                     selected = false,
-                    icon = { Icon(Icons.Default.ExitToApp, contentDescription = null, tint = Color(0xFFFF6B6B)) },
+                    icon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, tint = Color(0xFFFF6B6B)) },
                     onClick = {
                         scope.launch { drawerState.close() }
                         navController.navigate("login") {
@@ -131,7 +148,7 @@ fun CatalogoScreen(
                     .background(Color(0xFFF5F5F5))
                     .padding(paddingValues)
             ) {
-                // Header con menú hamburguesa
+                // Header App
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -144,35 +161,28 @@ fun CatalogoScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(
-                            onClick = {
-                                scope.launch { drawerState.open() }
-                            }
-                        ) {
-                            Icon(
-                                Icons.Default.Menu,
-                                contentDescription = "Menú",
-                                tint = Color.White,
-                                modifier = Modifier.size(32.dp)
-                            )
+                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                            Icon(Icons.Default.Menu, contentDescription = "Menú", tint = Color.White, modifier = Modifier.size(32.dp))
                         }
 
-                        Text(
-                            "Catálogo de Pelotas",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-
-                        IconButton(
-                            onClick = { navController.navigate("carrito") }
-                        ) {
-                            Icon(
-                                Icons.Default.ShoppingCart,
-                                contentDescription = "Carrito",
-                                tint = Color.White,
-                                modifier = Modifier.size(28.dp)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                "MundoPelota",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
                             )
+                            if (valorDolar > 0) {
+                                Text(
+                                    "USD: $${valorDolar}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(alpha = 0.9f)
+                                )
+                            }
+                        }
+
+                        IconButton(onClick = { navController.navigate("carrito") }) {
+                            Icon(Icons.Default.ShoppingCart, contentDescription = "Carrito", tint = Color.White, modifier = Modifier.size(28.dp))
                         }
                     }
                 }
@@ -181,106 +191,45 @@ fun CatalogoScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.Top
+                        .padding(16.dp)
                 ) {
-                    // Loading
                     if (isLoading) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator(color = Purple40)
                         }
-                        Spacer(Modifier.height(16.dp))
                     }
 
-                    // Error
                     if (error != null) {
                         Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 16.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
-                            shape = RoundedCornerShape(12.dp)
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE))
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Default.ShoppingCart,
-                                    contentDescription = null,
-                                    tint = Color(0xFFC71C1C),
-                                    modifier = Modifier.size(24.dp)
-                                )
+                            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Warning, null, tint = Color(0xFFC71C1C))
                                 Spacer(Modifier.width(12.dp))
-                                Text(
-                                    "Error: $error",
-                                    color = Color(0xFFC71C1C),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
+                                Text("Error: $error", color = Color(0xFFC71C1C))
                             }
                         }
                     }
 
-                    // Lista de productos
                     if (pelotas.isEmpty() && !isLoading) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth(0.8f)
-                                    .padding(32.dp),
-                                colors = CardDefaults.cardColors(containerColor = Color.White),
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(32.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Icon(
-                                        Icons.Default.ShoppingCart,
-                                        contentDescription = null,
-                                        tint = Purple40,
-                                        modifier = Modifier.size(64.dp)
-                                    )
-                                    Spacer(Modifier.height(16.dp))
-                                    Text(
-                                        "No hay productos disponibles",
-                                        style = MaterialTheme.typography.headlineSmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Purple40
-                                    )
-                                }
-                            }
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("No hay productos disponibles", color = Color.Gray)
                         }
                     } else {
                         LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
+                            modifier = Modifier.weight(1f),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(pelotas) { pelota ->
                                 ProductoCard(
                                     pelota = pelota,
+                                    valorDolar = valorDolar, // <--- PASAMOS EL DÓLAR
                                     onAgregarAlCarrito = {
                                         onAgregarAlCarrito(pelota)
                                         catalogoViewModel.decrementarStockAlComprar(pelota.id) {
                                             scope.launch {
-                                                snackbarHostState.showSnackbar(
-                                                    message = "${pelota.nombre} agregado al carrito ✅",
-                                                    duration = SnackbarDuration.Short
-                                                )
+                                                snackbarHostState.showSnackbar("${pelota.nombre} agregado ✅")
                                             }
                                         }
                                     }
@@ -297,122 +246,86 @@ fun CatalogoScreen(
 @Composable
 fun ProductoCard(
     pelota: Pelota,
+    valorDolar: Double, // <--- NUEVO PARÁMETRO
     onAgregarAlCarrito: () -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 0.dp),
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            // 🖼️ AGREGAR IMAGEN AQUÍ (NUEVO)
+        Column(Modifier.padding(16.dp)) {
             AsyncImage(
                 model = pelota.imageUrl,
                 contentDescription = pelota.nombre,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-                    .clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop,
-                placeholder = painterResource(id = android.R.drawable.ic_menu_gallery),
-                error = painterResource(id = android.R.drawable.ic_menu_report_image)
+                modifier = Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop
             )
 
             Spacer(Modifier.height(12.dp))
 
-            Text(
-                pelota.nombre,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF1F2121),
-                modifier = Modifier.fillMaxWidth()
-            )
+            Text(pelota.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
 
             Spacer(Modifier.height(8.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val categoria = categoriaDesdeDeporte(pelota.deporte)
-                Badge(
-                    containerColor = Color(0xFFE1F5FE),
-                    contentColor = Color(0xFF01579B)
-                ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Categoría
+                Surface(color = Color(0xFFE1F5FE), shape = RoundedCornerShape(4.dp)) {
                     Text(
-                        categoria?.name?.replace('_', ' ') ?: pelota.deporte,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(horizontal = 8.dp)
+                        pelota.deporte,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        color = Color(0xFF01579B),
+                        style = MaterialTheme.typography.labelSmall
                     )
                 }
 
-                Spacer(Modifier.width(8.dp))
+                // PRECIO CON DÓLAR
+                Surface(color = Color(0xFF4CAF50), shape = RoundedCornerShape(4.dp)) {
+                    val precioCLP = pelota.precio.toInt()
+                    val textoPrecio = if (valorDolar > 0) {
+                        val precioUSD = String.format("%.2f", pelota.precio / valorDolar)
+                        "$$precioCLP / USD $precioUSD"
+                    } else {
+                        "$$precioCLP CLP"
+                    }
 
-                Badge(
-                    containerColor = Color(0xFF4CAF50),
-                    contentColor = Color.White
-                ) {
                     Text(
-                        "\$${pelota.precio}",
-                        style = MaterialTheme.typography.labelSmall,
+                        textoPrecio,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp)
+                        style = MaterialTheme.typography.labelSmall
                     )
                 }
 
-                Spacer(Modifier.width(8.dp))
-
-                Badge(
-                    containerColor = if (pelota.stock > 0) Color(0xFF2196F3) else Color(0xFFFF6B6B),
-                    contentColor = Color.White
-                ) {
+                // Stock
+                Surface(color = if (pelota.stock > 0) Color(0xFF2196F3) else Color(0xFFFF6B6B), shape = RoundedCornerShape(4.dp)) {
                     Text(
                         "Stock: ${pelota.stock}",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelSmall
                     )
                 }
             }
 
             Spacer(Modifier.height(12.dp))
-
-            Text(
-                pelota.descripcion,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF666666),
-                modifier = Modifier.fillMaxWidth()
-            )
-
+            Text(pelota.descripcion, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
             Spacer(Modifier.height(12.dp))
 
             Button(
                 onClick = onAgregarAlCarrito,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(40.dp),
+                modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF32B8C6)),
-                shape = RoundedCornerShape(8.dp),
                 enabled = pelota.stock > 0
             ) {
-                Icon(
-                    Icons.Default.ShoppingCart,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(18.dp)
-                )
+                Icon(Icons.Default.ShoppingCart, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Agregar al Carrito", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Agregar al Carrito")
             }
         }
     }
 }
+
+
+

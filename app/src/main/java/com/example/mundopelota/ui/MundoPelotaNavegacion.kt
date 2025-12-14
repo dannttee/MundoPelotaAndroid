@@ -9,14 +9,18 @@ import com.example.mundopelota.ui.*
 import com.example.mundopelota.viewmodel.CartViewModel
 import com.example.mundopelota.viewmodel.CatalogoViewModel
 import com.example.mundopelota.viewmodel.UserAdminViewModel
+import com.example.mundopelota.viewmodel.CatalogoAdminViewModel
+
 
 @Composable
 fun MundoPelotaNavegacion() {
     val navController = rememberNavController()
-    // Instancias únicas de ViewModels
+
+    // Instancias de ViewModels
     val userAdminViewModel: UserAdminViewModel = viewModel()
     val cartViewModel: CartViewModel = viewModel()
     val catalogoViewModel: CatalogoViewModel = viewModel()
+    val catalogoAdminViewModel: CatalogoAdminViewModel = viewModel() // Instancia para Admin
 
     NavHost(navController = navController, startDestination = "login") {
         composable("login") {
@@ -28,18 +32,10 @@ fun MundoPelotaNavegacion() {
         }
 
         composable("home") {
-            // SIMPLE: Solo llamamos a la pantalla, ella sabe qué hacer
             HomeScreen(
                 navController = navController,
                 userAdminViewModel = userAdminViewModel,
                 catalogoViewModel = catalogoViewModel
-            )
-        }
-
-        composable("admin_home") {
-            HomeAdminScreen(
-                navController = navController,
-                userAdminViewModel = userAdminViewModel
             )
         }
 
@@ -52,6 +48,14 @@ fun MundoPelotaNavegacion() {
                 }
             )
         }
+
+        composable("admin_catalogo") {
+            CatalogoAdminScreen(
+                navController = navController,
+                catalogViewModel = viewModel<CatalogoViewModel>()
+            )
+        }
+
 
         composable("carrito") {
             CarritoScreen(

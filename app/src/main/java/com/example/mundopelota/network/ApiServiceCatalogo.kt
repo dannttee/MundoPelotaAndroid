@@ -29,7 +29,6 @@ interface ApiServiceCatalogo {
     suspend fun eliminarPelota(@Path("id") id: Long): Response<Void>
 }
 
-// Data classes alineadas con Pelota de Spring
 data class PelotaResponse(
     val id: Long,
     val nombre: String,
@@ -50,4 +49,3 @@ data class PelotaRequest(
     val marca: String,
     val stock: Int
 )
-
