@@ -48,14 +48,14 @@ class CartViewModel : ViewModel() {
                 if (response.isSuccessful && response.body() != null) {
                     _carritoServidor.value = response.body()
                     _error.value = null
-                    Log.d("CartVM", "Producto agregado: ${response.body()?.items?.size} items")
+                    Log.d("CartVM", "✅ Producto agregado: ${response.body()?.items?.size} items")
                 } else {
                     _error.value = "Error: ${response.code()}"
-                    Log.e("CartVM", "Error: ${response.code()}")
+                    Log.e("CartVM", "❌ Error: ${response.code()}")
                 }
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"
-                Log.e("CartVM", "Exception: ${e.message}")
+                Log.e("CartVM", "❌ Exception: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -72,13 +72,14 @@ class CartViewModel : ViewModel() {
                 if (response.isSuccessful && response.body() != null) {
                     _carritoServidor.value = response.body()
                     _error.value = null
-                    Log.d("CartVM", "Carrito obtenido: ${response.body()?.items?.size} items")
+                    Log.d("CartVM", "✅ Carrito obtenido: ${response.body()?.items?.size} items")
                 } else {
                     _error.value = "Error: ${response.code()}"
+                    Log.e("CartVM", "❌ Error: ${response.code()}")
                 }
             } catch (e: Exception) {
                 _error.value = e.message
-                Log.e("CartVM", "Exception: ${e.message}")
+                Log.e("CartVM", "❌ Exception: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -95,12 +96,14 @@ class CartViewModel : ViewModel() {
                 if (response.isSuccessful && response.body() != null) {
                     _carritoServidor.value = response.body()
                     _error.value = null
-                    Log.d("CartVM", "Producto eliminado")
+                    Log.d("CartVM", "✅ Producto eliminado")
                 } else {
                     _error.value = "Error: ${response.code()}"
+                    Log.e("CartVM", "❌ Error: ${response.code()}")
                 }
             } catch (e: Exception) {
                 _error.value = e.message
+                Log.e("CartVM", "❌ Exception: ${e.message}")
             } finally {
                 _isLoading.value = false
             }
@@ -115,7 +118,7 @@ class CartViewModel : ViewModel() {
             try {
                 Log.d("CartVM", "🔄 Iniciando checkout para usuario: $usuarioId")
                 val response = carritoApi.checkout(usuarioId)
-                Log.d("CartVM", "✅ Respuesta: ${response.code()}")
+                Log.d("CartVM", "📡 Respuesta: ${response.code()}")
 
                 if (response.isSuccessful && response.body()?.success == true) {
                     _carritoServidor.value = null
@@ -124,7 +127,7 @@ class CartViewModel : ViewModel() {
                     Log.d("CartVM", "✅ Checkout realizado")
                 } else {
                     _error.value = "Error: ${response.code()}"
-                    Log.e("CartVM", "❌ Error: ${response.code()}")
+                    Log.e("CartVM", "❌ Error checkout: ${response.code()}")
                 }
             } catch (e: Exception) {
                 _error.value = "Error: ${e.message}"
@@ -135,18 +138,20 @@ class CartViewModel : ViewModel() {
         }
     }
 
-
     // Limpiar carrito local
     fun clearCart() {
         carrito.clear()
+        Log.d("CartVM", "🗑️ Carrito local limpiado")
     }
 
     // Limpiar carrito completo
     fun limpiarTodo() {
         carrito.clear()
         _carritoServidor.value = null
+        Log.d("CartVM", "🗑️ Todo limpiado")
     }
 }
+
 
 
 

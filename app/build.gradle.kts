@@ -60,6 +60,8 @@ dependencies {
     implementation(libs.androidx.compose.runtime.livedata)
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.6.1")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1")
+    implementation("io.coil-kt:coil-compose:2.4.0")
+
 
     // 🆕 RETROFIT (HTTP Client)
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

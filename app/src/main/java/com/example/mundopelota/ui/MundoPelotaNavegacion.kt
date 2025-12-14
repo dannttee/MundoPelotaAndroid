@@ -1,17 +1,20 @@
-package com.example.mundopelota.ui
+package com.example.mundopelota
 
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavType
-import androidx.navigation.compose.*
-import androidx.navigation.navArgument
-import com.example.mundopelota.viewmodel.UserAdminViewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.mundopelota.ui.*
 import com.example.mundopelota.viewmodel.CartViewModel
 import com.example.mundopelota.viewmodel.CatalogoViewModel
+import com.example.mundopelota.viewmodel.UserAdminViewModel
 
 @Composable
-fun MundoPelotaNavegacion(userAdminViewModel: UserAdminViewModel) {
+fun MundoPelotaNavegacion() {
     val navController = rememberNavController()
+    // Instancias únicas de ViewModels
+    val userAdminViewModel: UserAdminViewModel = viewModel()
     val cartViewModel: CartViewModel = viewModel()
     val catalogoViewModel: CatalogoViewModel = viewModel()
 
@@ -19,39 +22,36 @@ fun MundoPelotaNavegacion(userAdminViewModel: UserAdminViewModel) {
         composable("login") {
             LoginScreen(navController, userAdminViewModel)
         }
-        composable("register") {  // ✅ AGREGAR ESTA RUTA
+
+        composable("register") {
             RegisterScreen(navController, userAdminViewModel)
         }
+
         composable("home") {
-            HomeScreen(navController, userAdminViewModel)
+            // SIMPLE: Solo llamamos a la pantalla, ella sabe qué hacer
+            HomeScreen(
+                navController = navController,
+                userAdminViewModel = userAdminViewModel,
+                catalogoViewModel = catalogoViewModel
+            )
         }
+
         composable("catalogo") {
             CatalogoScreen(
                 navController = navController,
                 catalogoViewModel = catalogoViewModel,
-                onAgregarAlCarrito = { pelota -> cartViewModel.addPelotaAlCarrito(pelota) },
-                userAdminViewModel = userAdminViewModel
+                onAgregarAlCarrito = { pelota ->
+                    cartViewModel.addPelotaAlCarrito(pelota)
+                }
             )
         }
+
         composable("carrito") {
-            CarritoScreen(navController, cartViewModel, userAdminViewModel)
-        }
-        composable("admin") {
-            // HomeAdminScreen por implementar
-            HomeScreen(navController, userAdminViewModel)
-        }
-        composable("catalogoAdmin") {
-            CatalogoAdminScreen(
+            CarritoScreen(
                 navController = navController,
-                catalogViewModel = catalogoViewModel
+                carritoItems = cartViewModel.carrito,
+                catalogoViewModel = catalogoViewModel
             )
         }
     }
 }
-
-
-
-
-
-
-
