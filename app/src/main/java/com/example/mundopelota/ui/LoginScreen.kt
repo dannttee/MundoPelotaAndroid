@@ -57,17 +57,11 @@ fun LoginScreen(navController: NavController, userAdminViewModel: UserAdminViewM
             // Reset para próximo login
             userAdminViewModel.resetLoginExitoso()
 
-            // Navega según el rol
-            if (isAdmin) {
-                Log.d("LoginScreen", "Navegando a: admin")
-                navController.navigate("admin") {
-                    popUpTo("login") { inclusive = true }
-                }
-            } else {
-                Log.d("LoginScreen", "Navegando a: home")
-                navController.navigate("home") {
-                    popUpTo("login") { inclusive = true }
-                }
+            // CORRECCIÓN CRÍTICA: Siempre vamos a 'home'.
+            // El 'HomeScreen' ya sabe si es admin o no y mostrará el panel correspondiente.
+            // NO EXISTE LA RUTA "admin", POR ESO CRASHEABA.
+            navController.navigate("home") {
+                popUpTo("login") { inclusive = true }
             }
         }
     }
@@ -187,6 +181,7 @@ fun LoginScreen(navController: NavController, userAdminViewModel: UserAdminViewM
         }
     }
 }
+
 
 
 

@@ -37,7 +37,7 @@ fun HomeScreen(
     navController: NavController,
     userAdminViewModel: UserAdminViewModel,
     catalogoViewModel: CatalogoViewModel,
-    isAdmin: Boolean = false // <--- ESTO ES LO ÚNICO NUEVO EN LOS PARÁMETROS
+    isAdmin: Boolean = false
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -45,6 +45,8 @@ fun HomeScreen(
     val pelotasDestacadas = pelotas.take(4)
 
     LaunchedEffect(Unit) {
+        // CORRECCIÓN CRÍTICA: NO llamamos a userAdminViewModel.obtenerUsuarios() aquí
+        // Esa función probablemente está rota o el endpoint no existe, y es lo que te crashea como admin.
         catalogoViewModel.obtenerPelotasServidor()
     }
 
@@ -69,10 +71,9 @@ fun HomeScreen(
                 NavigationDrawerItem(
                     label = { Text("Home") },
                     icon = { Icon(Icons.Default.Home, contentDescription = null) },
-                    selected = true, // Marcamos Home como seleccionado por defecto
+                    selected = true,
                     onClick = {
                         scope.launch { drawerState.close() }
-                        // No navegamos a "home" de nuevo para evitar recargas innecesarias
                     }
                 )
 
@@ -96,21 +97,18 @@ fun HomeScreen(
                     }
                 )
 
-                // --- AQUÍ ESTÁ EL CAMBIO CRÍTICO PARA ADMIN ---
                 if (isAdmin) {
                     Divider()
                     NavigationDrawerItem(
-                        label = { Text("Panel Admin") }, // Cambié "Admin" por "Panel Admin" para que sea claro
+                        label = { Text("Panel Admin") },
                         icon = { Icon(Icons.Default.Settings, contentDescription = null) },
                         selected = false,
                         onClick = {
                             scope.launch { drawerState.close() }
-                            // ELIMINAMOS LA LÍNEA QUE CAUSABA EL CRASH: navController.navigate("admin")
-                            // Ahora solo cerramos el menú, porque ya estamos en la pantalla donde se mostrará el panel
+                            // Ya estamos en el home admin, no navegamos a ningún lado
                         }
                     )
                 }
-                // ----------------------------------------------
 
                 Spacer(modifier = Modifier.weight(1f))
                 Divider()
@@ -151,8 +149,6 @@ fun HomeScreen(
                     .padding(paddingValues)
                     .padding(16.dp)
             ) {
-
-                // --- CONTENIDO CONDICIONAL ---
                 if (isAdmin) {
                     // SI ES ADMIN: Mostramos el panel de bienvenida
                     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White)) {
@@ -164,7 +160,7 @@ fun HomeScreen(
                         }
                     }
                 } else {
-                    // SI NO ES ADMIN: Mostramos tu diseño original completo
+                    // SI NO ES ADMIN: Mostramos diseño original
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text("¡Bienvenido a MundoPelota!", fontWeight = FontWeight.Bold, color = Purple40)
@@ -202,10 +198,7 @@ fun HomeScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Grid Manual (Tu diseño pero seguro)
                     if (pelotasDestacadas.isNotEmpty()) {
-                        // Aquí usaba LazyVerticalGrid antes, pero dentro de un Column con scroll da error.
-                        // Lo cambiamos por un loop simple que funciona igual visualmente
                         pelotasDestacadas.chunked(2).forEach { fila ->
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 fila.forEach { pelota ->
@@ -248,7 +241,7 @@ fun HomeScreen(
                             }
                         }
                     }
-                } // FIN DEL ELSE
+                } // FIN ELSE
             }
         }
     }
@@ -294,7 +287,6 @@ fun ProductoCardMini(
                 overflow = TextOverflow.Ellipsis
             )
 
-            // USAMOS SURFACE EN VEZ DE BADGE (Para evitar error de API experimental)
             Surface(
                 color = Color(0xFF4CAF50),
                 contentColor = Color.White,
@@ -328,6 +320,7 @@ fun ProductoCardMini(
         }
     }
 }
+
 
 
 

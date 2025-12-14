@@ -36,6 +36,13 @@ fun MundoPelotaNavegacion() {
             )
         }
 
+        composable("admin_home") {
+            HomeAdminScreen(
+                navController = navController,
+                userAdminViewModel = userAdminViewModel
+            )
+        }
+
         composable("catalogo") {
             CatalogoScreen(
                 navController = navController,
