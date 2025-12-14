@@ -23,7 +23,7 @@ interface ApiServiceCarrito {
     @POST("/api/carrito/{usuarioId}/checkout")
     suspend fun checkout(
         @Path("usuarioId") usuarioId: Int
-    ): Response<OrdenResponse>
+    ): Response<ApiResponse<String>>
 }
 
 // Data Classes
@@ -51,3 +51,10 @@ data class OrdenResponse(
     val estado: String,
     val total: Double
 )
+data class ApiResponse<T>(
+    val success: Boolean,
+    val message: String,
+    val data: T
+)
+
+
