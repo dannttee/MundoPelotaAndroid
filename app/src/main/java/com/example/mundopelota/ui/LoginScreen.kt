@@ -113,7 +113,7 @@ fun LoginScreen(navController: NavController, userAdminViewModel: UserAdminViewM
 
         // Link para registro
         Spacer(modifier = Modifier.height(16.dp))
-        TextButton(onClick = { /* navController.navigate("register") */ }) {
+        TextButton(onClick = { navController.navigate("register") }) {
             Text("¿No tienes cuenta? Registrate")
         }
     }

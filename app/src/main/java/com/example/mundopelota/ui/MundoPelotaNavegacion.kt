@@ -19,6 +19,9 @@ fun MundoPelotaNavegacion(userAdminViewModel: UserAdminViewModel) {
         composable("login") {
             LoginScreen(navController, userAdminViewModel)
         }
+        composable("register") {  // ✅ AGREGAR ESTA RUTA
+            RegisterScreen(navController, userAdminViewModel)
+        }
         composable("home") {
             HomeScreen(navController, userAdminViewModel)
         }
@@ -45,8 +48,6 @@ fun MundoPelotaNavegacion(userAdminViewModel: UserAdminViewModel) {
         }
     }
 }
-
-
 
 
 

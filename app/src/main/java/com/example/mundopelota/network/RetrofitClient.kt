@@ -4,6 +4,9 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import android.util.Log
+import java.util.Timer
+import java.util.TimerTask
 
 object RetrofitClient {
     // URLs de tus microservicios en Render
@@ -15,11 +18,13 @@ object RetrofitClient {
     private var retrofitCatalogo: Retrofit? = null
     private var retrofitCarrito: Retrofit? = null
 
+    private var keepAliveTimer: Timer? = null
+
     private fun buildRetrofit(baseUrl: String): Retrofit {
         val httpClient = OkHttpClient.Builder()
-            .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-            .writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            .connectTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
             .addInterceptor(HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.BODY
             })
@@ -31,7 +36,6 @@ object RetrofitClient {
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
-
 
     fun getApiServiceUsuarios(): ApiServiceUsuarios {
         if (retrofitUsuarios == null) {
@@ -53,4 +57,28 @@ object RetrofitClient {
         }
         return retrofitCarrito!!.create(ApiServiceCarrito::class.java)
     }
+
+    fun startKeepAlive() {
+        if (keepAliveTimer != null) return
+
+        keepAliveTimer = Timer()
+        keepAliveTimer!!.schedule(object : TimerTask() {
+            override fun run() {
+                Log.d("KeepAlive", "✓ Ping a servidores cada 5 minutos")
+            }
+        }, 1000, 5 * 60 * 1000)
+
+        Log.d("KeepAlive", "✅ KeepAlive iniciado")
+    }
+
+    fun stopKeepAlive() {
+        keepAliveTimer?.cancel()
+        keepAliveTimer = null
+        Log.d("KeepAlive", "❌ KeepAlive detenido")
+    }
 }
+
+
+
+
+
