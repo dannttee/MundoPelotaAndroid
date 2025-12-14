@@ -113,22 +113,28 @@ class CartViewModel : ViewModel() {
         _isLoading.value = true
         viewModelScope.launch {
             try {
+                Log.d("CartVM", "🔄 Iniciando checkout para usuario: $usuarioId")
                 val response = carritoApi.checkout(usuarioId)
-                if (response.isSuccessful) {
+                Log.d("CartVM", "✅ Respuesta: ${response.code()}")
+
+                if (response.isSuccessful && response.body()?.success == true) {
                     _carritoServidor.value = null
                     carrito.clear()
                     _error.value = null
-                    Log.d("CartVM", "Checkout realizado")
+                    Log.d("CartVM", "✅ Checkout realizado")
                 } else {
                     _error.value = "Error: ${response.code()}"
+                    Log.e("CartVM", "❌ Error: ${response.code()}")
                 }
             } catch (e: Exception) {
-                _error.value = e.message
+                _error.value = "Error: ${e.message}"
+                Log.e("CartVM", "❌ Exception: ${e.message}", e)
             } finally {
                 _isLoading.value = false
             }
         }
     }
+
 
     // Limpiar carrito local
     fun clearCart() {
